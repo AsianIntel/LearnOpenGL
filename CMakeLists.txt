@@ -10,4 +10,4 @@ add_executable(OpenGL src/main.cpp
         src/Shader.cpp
         src/Shader.h)
 target_link_libraries(OpenGL glfw glad)
-target_include_directories(OpenGL PUBLIC thirdparty/glad/include thirdparty/glfw/include)
+target_include_directories(OpenGL PUBLIC thirdparty/glad/include thirdparty/glfw/include thirdparty/stb_image)
