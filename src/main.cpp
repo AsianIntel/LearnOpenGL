@@ -6,38 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <optional>
-
-std::vector<char> read_file(const std::string& filename) {
-    std::ifstream file(filename);
-    file.seekg(0, std::ios::end);
-
-    const uint32_t file_length = file.tellg();
-    file.seekg(0);
-
-    std::vector<char> file_data(file_length);
-    file.read(file_data.data(), file_length);
-
-    return file_data;
-}
-
-std::optional<uint32_t> read_shader(const std::string& filename, const GLenum type) {
-    const std::vector<char> shader_source = read_file(filename);
-    const uint32_t shader = glCreateShader(type);
-    const char* vertex_shader_data = shader_source.data();
-    glShaderSource(shader, 1, &vertex_shader_data, nullptr);
-    glCompileShader(shader);
-
-    int32_t success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        std::array<char, 512> shader_error_log{};
-        glGetShaderInfoLog(shader, 512, nullptr, shader_error_log.data());
-        std::cout << "Error compiling shader: " << shader_error_log.data() << std::endl;
-        return {};
-    }
-
-    return shader;
-}
+#include "Shader.h"
 
 int main() {
     glfwInit();
@@ -63,44 +32,15 @@ int main() {
        glViewport(0, 0, width, height);
     });
 
-    const std::optional<uint32_t> vertex_shader = read_shader("../src/shader.vert", GL_VERTEX_SHADER);
-    if (!vertex_shader.has_value()) {
-        glfwTerminate();
-        return -1;
-    }
-    const std::optional<uint32_t> fragment_shader = read_shader("../src/shader.frag", GL_FRAGMENT_SHADER);
-    if (!fragment_shader.has_value()) {
-        glfwTerminate();
-        return -1;
-    }
-
-    const uint32_t shader_program = glCreateProgram();
-    glAttachShader(shader_program, vertex_shader.value());
-    glAttachShader(shader_program, fragment_shader.value());
-    glLinkProgram(shader_program);
-    {
-        int32_t success;
-        glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-        if (!success) {
-            std::array<char, 512> shader_error_log{};
-            glGetProgramInfoLog(shader_program, 512, nullptr, shader_error_log.data());
-            std::cout << "Error linking shader: " << shader_error_log.data() << std::endl;
-            glfwTerminate();
-            return -1;
-        }
-    }
-    glDeleteShader(vertex_shader.value());
-    glDeleteShader(fragment_shader.value());
+    Shader shader("../src/shader.vert", "../src/shader.frag");
 
     constexpr std::array vertices = {
-        0.5f, 0.5f, 0.0f, // top right
-        0.5f, -0.5f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f, // bottom left
-        -0.5f, 0.5f, 0.0f // top left
+        0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f
     };
     constexpr std::array indices = {
-        0, 1, 3,
-        1, 2, 3
+        0, 1, 2
     };
 
     uint32_t vbo;
@@ -116,14 +56,17 @@ int main() {
     uint32_t vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), static_cast<void*>(0));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shader_program);
+        shader.use();
+
         glBindVertexArray(vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
