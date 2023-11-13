@@ -3,12 +3,20 @@
 #include <iostream>
 #include <array>
 #include <fstream>
-#include <cstdint>
+#include <optional>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #include "Shader.h"
+#include "Camera.h"
+
+std::optional<float> last_x;
+std::optional<float> last_y;
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 int main() {
     glfwInit();
@@ -29,23 +37,53 @@ int main() {
         return -1;
     }
     glViewport(0, 0, 800, 600);
+    glEnable(GL_DEPTH_TEST);
 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetFramebufferSizeCallback(window, []([[maybe_unused]]GLFWwindow* glfw_window, const int32_t width, const int32_t height) {
        glViewport(0, 0, width, height);
+    });
+    glfwSetCursorPosCallback(window, [](GLFWwindow* glfw_window, double x_pos_in, double y_pos_in) {
+        if (!last_x.has_value() || !last_y.has_value()) {
+            last_x = x_pos_in;
+            last_y = y_pos_in;
+        }
+        float x_offset = x_pos_in - last_x.value();
+        float y_offset = last_y.value() - y_pos_in;
+
+        last_x = x_pos_in;
+        last_y = y_pos_in;
+        camera.process_mouse_movement(x_offset, y_offset);
+    });
+    glfwSetScrollCallback(window, [](GLFWwindow* glfw_window, double x_offset, double y_offset) {
+       camera.process_mouse_scroll(y_offset);
     });
 
     Shader shader("../src/shader.vert", "../src/shader.frag");
 
     constexpr std::array vertices = {
-            0.5f, 0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
-            0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
-            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-            -0.5f, 0.5f, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f
-
+            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // 0
+            -0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 1
+            -0.5f, 0.5f, -0.5f,     0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // 2
+            -0.5f, 0.5f, 0.5f,      1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 3
+            0.5f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // 4
+            0.5f, -0.5f, 0.5f,      0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 5
+            0.5f, 0.5f, -0.5f,      0.0f, 0.0f, 1.0f,   1.0f, 0.0f, // 6
+            0.5f, 0.5f, 0.5f,       1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 7
     };
     constexpr std::array indices = {
+        2, 6, 7,
+        2, 3, 7,
+        0, 4, 5,
+        0, 1, 5,
+        0, 2, 6,
+        0, 4, 6,
+        1, 3, 7,
+        1, 5, 7,
+        0, 2, 3,
         0, 1, 3,
-        1, 2, 3
+        4, 6, 7,
+        4, 5, 7
     };
 
     uint32_t vbo;
@@ -86,15 +124,64 @@ int main() {
     }
     stbi_image_free(data);
 
+    glm::vec3 cubePositions[] = {
+            glm::vec3( 0.0f, 0.0f, 0.0f),
+            glm::vec3( 2.0f, 5.0f, -15.0f),
+            glm::vec3(-1.5f, -2.2f, -2.5f),
+            glm::vec3(-3.8f, -2.0f, -12.3f),
+            glm::vec3( 2.4f, -0.4f, -3.5f),
+            glm::vec3(-1.7f, 3.0f, -7.5f),
+            glm::vec3( 1.3f, -2.0f, -2.5f),
+            glm::vec3( 1.5f, 2.0f, -2.5f),
+            glm::vec3( 1.5f, 0.2f, -1.5f),
+            glm::vec3(-1.3f, 1.0f, -1.5f)
+    };
+
+    float delta_time = 0.0f;
+    float last_frame = 0.0f;
+
     while (!glfwWindowShouldClose(window)) {
+        auto current_frame = static_cast<float>(glfwGetTime());
+        delta_time = current_frame - last_frame;
+        last_frame = current_frame;
+
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.process_keyboard(MovementDirection::Forward, delta_time);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.process_keyboard(MovementDirection::Backward, delta_time);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.process_keyboard(MovementDirection::Left, delta_time);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.process_keyboard(MovementDirection::Right, delta_time);
+
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
+        int32_t model_location = glGetUniformLocation(shader.m_programID, "model");
+        int32_t view_location = glGetUniformLocation(shader.m_programID, "view");
+        int32_t projection_location = glGetUniformLocation(shader.m_programID, "projection");
+
+        glm::mat4 view = camera.get_view_matrix();
+        glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(view));
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.get_zoom()), 800.0f / 600.0f, 0.1f, 100.0f);
+        glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
+
         glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        for (uint32_t i = 0; i < 10; i++) {
+            glm::mat4 model(1.0f);
+            model = glm::translate(model, cubePositions[i]);
+            float angle = 20.0f * static_cast<float>(i);
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
+            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+        }
 
         glfwPollEvents();
         glfwSwapBuffers(window);
