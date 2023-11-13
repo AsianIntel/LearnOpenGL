@@ -27,6 +27,7 @@ public:
 
     [[nodiscard]] glm::mat4 get_view_matrix() const { return glm::lookAt(m_position, m_position + m_front, m_up); }
     [[nodiscard]] float get_zoom() const { return m_zoom; }
+    [[nodiscard]] glm::vec3 get_position() const { return m_position; }
 
     void process_keyboard(MovementDirection direction, float delta_time);
     void process_mouse_movement(float x_offset, float y_offset);

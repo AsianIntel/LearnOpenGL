@@ -16,7 +16,7 @@
 
 std::optional<float> last_x;
 std::optional<float> last_y;
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 int main() {
     glfwInit();
@@ -48,53 +48,63 @@ int main() {
             last_x = x_pos_in;
             last_y = y_pos_in;
         }
-        float x_offset = x_pos_in - last_x.value();
-        float y_offset = last_y.value() - y_pos_in;
+        float x_offset = static_cast<float>(x_pos_in) - last_x.value();
+        float y_offset = last_y.value() - static_cast<float>(y_pos_in);
 
         last_x = x_pos_in;
         last_y = y_pos_in;
         camera.process_mouse_movement(x_offset, y_offset);
     });
     glfwSetScrollCallback(window, [](GLFWwindow* glfw_window, double x_offset, double y_offset) {
-       camera.process_mouse_scroll(y_offset);
+       camera.process_mouse_scroll(static_cast<float>(y_offset));
     });
 
-    Shader shader("../src/shader.vert", "../src/shader.frag");
+    Shader lighting_shader("../src/shader.vert", "../src/lighting_shader.frag");
+    Shader light_cube_shader("../src/shader.vert", "../src/white_shader.frag");
 
     constexpr std::array vertices = {
-            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // 0
-            -0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 1
-            -0.5f, 0.5f, -0.5f,     0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // 2
-            -0.5f, 0.5f, 0.5f,      1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 3
-            0.5f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // 4
-            0.5f, -0.5f, 0.5f,      0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 5
-            0.5f, 0.5f, -0.5f,      0.0f, 0.0f, 1.0f,   1.0f, 0.0f, // 6
-            0.5f, 0.5f, 0.5f,       1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // 7
-    };
-    constexpr std::array indices = {
-        2, 6, 7,
-        2, 3, 7,
-        0, 4, 5,
-        0, 1, 5,
-        0, 2, 6,
-        0, 4, 6,
-        1, 3, 7,
-        1, 5, 7,
-        0, 2, 3,
-        0, 1, 3,
-        4, 6, 7,
-        4, 5, 7
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
     };
 
     uint32_t vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);
-
-    uint32_t ebo;
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices.data(), GL_STATIC_DRAW);
 
     uint32_t vao;
     glGenVertexArrays(1, &vao);
@@ -124,22 +134,17 @@ int main() {
     }
     stbi_image_free(data);
 
-    glm::vec3 cubePositions[] = {
-            glm::vec3( 0.0f, 0.0f, 0.0f),
-            glm::vec3( 2.0f, 5.0f, -15.0f),
-            glm::vec3(-1.5f, -2.2f, -2.5f),
-            glm::vec3(-3.8f, -2.0f, -12.3f),
-            glm::vec3( 2.4f, -0.4f, -3.5f),
-            glm::vec3(-1.7f, 3.0f, -7.5f),
-            glm::vec3( 1.3f, -2.0f, -2.5f),
-            glm::vec3( 1.5f, 2.0f, -2.5f),
-            glm::vec3( 1.5f, 0.2f, -1.5f),
-            glm::vec3(-1.3f, 1.0f, -1.5f)
-    };
+    uint32_t light_vao;
+    glGenVertexArrays(1, &light_vao);
+    glBindVertexArray(light_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void*>(0));
+    glEnableVertexAttribArray(0);
 
-    float delta_time = 0.0f;
+    glm::vec3 light_pos(1.2f, 1.0f, 2.0f);
+
+    float delta_time;
     float last_frame = 0.0f;
-
     while (!glfwWindowShouldClose(window)) {
         auto current_frame = static_cast<float>(glfwGetTime());
         delta_time = current_frame - last_frame;
@@ -160,10 +165,19 @@ int main() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader.use();
-        int32_t model_location = glGetUniformLocation(shader.m_programID, "model");
-        int32_t view_location = glGetUniformLocation(shader.m_programID, "view");
-        int32_t projection_location = glGetUniformLocation(shader.m_programID, "projection");
+        // Render the cube
+        glBindVertexArray(vao);
+        lighting_shader.use();
+        int32_t model_location = glGetUniformLocation(lighting_shader.m_programID, "model");
+        int32_t view_location = glGetUniformLocation(lighting_shader.m_programID, "view");
+        int32_t projection_location = glGetUniformLocation(lighting_shader.m_programID, "projection");
+        int32_t object_color = glGetUniformLocation(lighting_shader.m_programID, "objectColor");
+        int32_t light_color = glGetUniformLocation(lighting_shader.m_programID, "lightColor");
+        int32_t light_pos_location = glGetUniformLocation(lighting_shader.m_programID, "lightPos");
+        int32_t view_pos = glGetUniformLocation(lighting_shader.m_programID, "viewPos");
+
+        glm::mat4 model(1.0f);
+        glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
 
         glm::mat4 view = camera.get_view_matrix();
         glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(view));
@@ -171,17 +185,30 @@ int main() {
         glm::mat4 projection = glm::perspective(glm::radians(camera.get_zoom()), 800.0f / 600.0f, 0.1f, 100.0f);
         glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
 
+        glUniform3fv(object_color, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+        glUniform3fv(light_color, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+        glUniform3fv(light_pos_location, 1, glm::value_ptr(light_pos));
+        glUniform3fv(view_pos, 1, glm::value_ptr(camera.get_position()));
+
         glBindTexture(GL_TEXTURE_2D, texture);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        for (uint32_t i = 0; i < 10; i++) {
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * static_cast<float>(i);
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
-            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
-        }
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Render the light cube
+        glBindVertexArray(light_vao);
+        light_cube_shader.use();
+        model_location = glGetUniformLocation(light_cube_shader.m_programID, "model");
+        view_location = glGetUniformLocation(light_cube_shader.m_programID, "view");
+        projection_location = glGetUniformLocation(light_cube_shader.m_programID, "projection");
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, light_pos);
+        model = glm::scale(model, glm::vec3(0.2f));
+
+        glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glfwPollEvents();
         glfwSwapBuffers(window);
