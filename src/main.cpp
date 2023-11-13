@@ -117,16 +117,33 @@ int main() {
     glEnableVertexAttribArray(2);
 
     int32_t width, height, channels;
-    uint8_t* data = stbi_load("../src/container.jpg", &width, &height, &channels, 0);
-    uint32_t texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    uint8_t* data = stbi_load("../src/container2.png", &width, &height, &channels, 0);
+    uint32_t texture0;
+    glGenTextures(1, &texture0);
+    glBindTexture(GL_TEXTURE_2D, texture0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    } else {
+        std::cout << "Failed to load texture" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    stbi_image_free(data);
+
+    data = stbi_load("../src/container2_specular.png", &width, &height, &channels, 0);
+    uint32_t texture1;
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     } else {
         std::cout << "Failed to load texture" << std::endl;
         glfwTerminate();
@@ -176,7 +193,6 @@ int main() {
         int32_t light_specular = glGetUniformLocation(lighting_shader.m_programID, "light.specular");
         int32_t light_position = glGetUniformLocation(lighting_shader.m_programID, "light.position");
         int32_t view_pos = glGetUniformLocation(lighting_shader.m_programID, "viewPos");
-        int32_t ambient = glGetUniformLocation(lighting_shader.m_programID, "material.ambient");
         int32_t diffuse = glGetUniformLocation(lighting_shader.m_programID, "material.diffuse");
         int32_t specular = glGetUniformLocation(lighting_shader.m_programID, "material.specular");
         int32_t shininess = glGetUniformLocation(lighting_shader.m_programID, "material.shininess");
@@ -195,12 +211,14 @@ int main() {
         glUniform3fv(light_specular, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
         glUniform3fv(light_position, 1, glm::value_ptr(light_pos));
         glUniform3fv(view_pos, 1, glm::value_ptr(camera.get_position()));
-        glUniform3fv(ambient, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-        glUniform3fv(diffuse, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-        glUniform3fv(specular, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+        glUniform1i(diffuse, 0);
+        glUniform1i(specular, 1);
         glUniform1f(shininess, 32.0f);
 
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture1);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Render the light cube
