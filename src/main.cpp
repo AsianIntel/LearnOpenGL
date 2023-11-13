@@ -162,7 +162,7 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera.process_keyboard(MovementDirection::Right, delta_time);
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Render the cube
@@ -171,10 +171,15 @@ int main() {
         int32_t model_location = glGetUniformLocation(lighting_shader.m_programID, "model");
         int32_t view_location = glGetUniformLocation(lighting_shader.m_programID, "view");
         int32_t projection_location = glGetUniformLocation(lighting_shader.m_programID, "projection");
-        int32_t object_color = glGetUniformLocation(lighting_shader.m_programID, "objectColor");
-        int32_t light_color = glGetUniformLocation(lighting_shader.m_programID, "lightColor");
-        int32_t light_pos_location = glGetUniformLocation(lighting_shader.m_programID, "lightPos");
+        int32_t light_ambient = glGetUniformLocation(lighting_shader.m_programID, "light.ambient");
+        int32_t light_diffuse = glGetUniformLocation(lighting_shader.m_programID, "light.diffuse");
+        int32_t light_specular = glGetUniformLocation(lighting_shader.m_programID, "light.specular");
+        int32_t light_position = glGetUniformLocation(lighting_shader.m_programID, "light.position");
         int32_t view_pos = glGetUniformLocation(lighting_shader.m_programID, "viewPos");
+        int32_t ambient = glGetUniformLocation(lighting_shader.m_programID, "material.ambient");
+        int32_t diffuse = glGetUniformLocation(lighting_shader.m_programID, "material.diffuse");
+        int32_t specular = glGetUniformLocation(lighting_shader.m_programID, "material.specular");
+        int32_t shininess = glGetUniformLocation(lighting_shader.m_programID, "material.shininess");
 
         glm::mat4 model(1.0f);
         glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
@@ -185,10 +190,15 @@ int main() {
         glm::mat4 projection = glm::perspective(glm::radians(camera.get_zoom()), 800.0f / 600.0f, 0.1f, 100.0f);
         glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glUniform3fv(object_color, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-        glUniform3fv(light_color, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-        glUniform3fv(light_pos_location, 1, glm::value_ptr(light_pos));
+        glUniform3fv(light_ambient, 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
+        glUniform3fv(light_diffuse, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+        glUniform3fv(light_specular, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+        glUniform3fv(light_position, 1, glm::value_ptr(light_pos));
         glUniform3fv(view_pos, 1, glm::value_ptr(camera.get_position()));
+        glUniform3fv(ambient, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+        glUniform3fv(diffuse, 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+        glUniform3fv(specular, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+        glUniform1f(shininess, 32.0f);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
