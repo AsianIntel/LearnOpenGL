@@ -13,6 +13,7 @@
 
 #include "Shader.h"
 #include "Camera.h"
+#include "Model.h"
 
 std::optional<float> last_x;
 std::optional<float> last_y;
@@ -59,7 +60,9 @@ int main() {
        camera.process_mouse_scroll(static_cast<float>(y_offset));
     });
 
-    Shader lighting_shader("../src/shader.vert", "../src/lighting_shader.frag");
+    stbi_set_flip_vertically_on_load(true);
+
+    Shader lighting_shader("../src/shader.vert", "../src/model_loading.frag");
     Shader light_cube_shader("../src/shader.vert", "../src/white_shader.frag");
 
     constexpr std::array vertices = {
@@ -115,69 +118,26 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void*>(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
-
-    int32_t width, height, channels;
-    uint8_t* data = stbi_load("../src/container2.png", &width, &height, &channels, 0);
-    uint32_t texture0;
-    glGenTextures(1, &texture0);
-    glBindTexture(GL_TEXTURE_2D, texture0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    } else {
-        std::cout << "Failed to load texture" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    stbi_image_free(data);
-
-    data = stbi_load("../src/container2_specular.png", &width, &height, &channels, 0);
-    uint32_t texture1;
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    } else {
-        std::cout << "Failed to load texture" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    stbi_image_free(data);
+    glBindVertexArray(0);
 
     uint32_t light_vao;
     glGenVertexArrays(1, &light_vao);
     glBindVertexArray(light_vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void*>(0));
+    glBindVertexArray(0);
 
     glm::vec3 light_pos(1.2f, 1.0f, 2.0f);
 
-    glm::vec3 cubePositions[] = {
-            glm::vec3( 0.0f,  0.0f,  0.0f),
-            glm::vec3( 2.0f,  5.0f, -15.0f),
-            glm::vec3(-1.5f, -2.2f, -2.5f),
-            glm::vec3(-3.8f, -2.0f, -12.3f),
-            glm::vec3( 2.4f, -0.4f, -3.5f),
-            glm::vec3(-1.7f,  3.0f, -7.5f),
-            glm::vec3( 1.3f, -2.0f, -2.5f),
-            glm::vec3( 1.5f,  2.0f, -2.5f),
-            glm::vec3( 1.5f,  0.2f, -1.5f),
-            glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
     glm::vec3 point_light_positions[] = {
             glm::vec3( 0.7f, 0.2f, 2.0f),
             glm::vec3( 2.3f, -3.3f, -4.0f),
             glm::vec3(-4.0f, 2.0f, -12.0f),
             glm::vec3( 0.0f, 0.0f, -3.0f)
     };
+
+    Model backpack_model("../src/backpack/backpack.obj");
 
     float delta_time;
     float last_frame = 0.0f;
@@ -256,19 +216,8 @@ int main() {
         glUniform1f(glGetUniformLocation(lighting_shader.m_programID, "pointLights[3].linear"), 0.09f);
         glUniform1f(glGetUniformLocation(lighting_shader.m_programID, "pointLights[3].quadratic"), 0.032f);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-
-        for (uint32_t i = 0; i < 10; i++) {
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i;
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+        backpack_model.draw(lighting_shader);
 
         // Render the light cube
         glBindVertexArray(light_vao);
@@ -276,7 +225,6 @@ int main() {
         model_location = glGetUniformLocation(light_cube_shader.m_programID, "model");
         view_location = glGetUniformLocation(light_cube_shader.m_programID, "view");
         projection_location = glGetUniformLocation(light_cube_shader.m_programID, "projection");
-
 
         glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
